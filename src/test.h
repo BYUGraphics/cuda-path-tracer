@@ -1,15 +1,22 @@
+#pragma once
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <mesh.h>
 
-__global__ void d_testCUDA(int* _in, int _incrementBy){
-	_in[threadIdx.x] += _incrementBy;
-}
 
 void printVec4(glm::vec4 _in){
 	printf("(%f, %f, %f, %f)\n", _in.x, _in.y, _in.z, _in.w);
+}
+
+void printVec3(glm::vec3 _in){
+	printf("(%f, %f, %f)\n", _in.x, _in.y, _in.z);
+}
+
+void printVec2(glm::vec2 _in){
+	printf("(%f, %f)\n", _in.x, _in.y);
 }
 
 void testGLM(){
@@ -19,6 +26,10 @@ void testGLM(){
 	glm::mat4 Model = glm::translate(glm::mat4(1.0f), glm::vec3(1.0f));
 	glm::vec4 Transformed = Model * Position;
 	printVec4(Transformed);
+}
+
+__global__ void d_testCUDA(int* _in, int _incrementBy){
+	_in[threadIdx.x] += _incrementBy;
 }
 
 void testCUDA(){
@@ -50,4 +61,17 @@ void testCUDA(){
 	for(i = 0; i < num; i++){
 		printf("%d\n", h_b[i]);
 	}
+}
+
+void testMeshOBJLoad(std::string _filename){
+	//load tetrahedron.obj
+	Mesh tetrahedron = Mesh(_filename, 0);
+	//print its vertices
+	tetrahedron.printVertices();
+	//print its vertex normals
+	tetrahedron.printNormals();
+	//print its texture coordinates
+	tetrahedron.printUVcoords();
+	//print its faces
+	tetrahedron.printFaces(false);
 }

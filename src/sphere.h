@@ -1,3 +1,12 @@
+/*
+*	Sphere class
+*	Author: Justin Jensen
+*	Date: 11/19/2015
+*
+*	Similar to the Mesh class, this class is only here so we can load it in and pass it straight to the GPU
+*
+*/
+
 #pragma once
 #include <glm/glm.hpp>
 #include <stdio.h>
@@ -18,4 +27,5 @@ public:
 		position = glm::vec4(_pos);
 		materialIdx = _matIdx;
 	}
+	
 };

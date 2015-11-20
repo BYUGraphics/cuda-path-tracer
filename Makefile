@@ -1,4 +1,4 @@
-INCLUDE_PATH = -I lib/ -I src/
+INCLUDE_PATHS = -I lib/ -I src/
 
 build:
-	nvcc src/*.cu $(INCLUDE_PATH) -o bin/pathtrace
+	nvcc src/*.cu src/*.cpp $(INCLUDE_PATHS) -o bin/pathtrace

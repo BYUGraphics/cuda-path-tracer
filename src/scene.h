@@ -1,3 +1,12 @@
+/*
+*	Scene class
+*	Author(s): Justin Jensen
+*	Date: 11/19/2015
+*
+*	This class loads a scene from a file and stores it in a way that makes it easy to pass all of the data to the GPU.
+*
+*/
+
 #pragma once
 #include <glm/glm.hpp>
 #include <stdio.h>
@@ -6,7 +15,6 @@
 #include <mesh.h>
 #include <sphere.h>
 #include <string>
-
 
 class Scene{
 public:
@@ -19,16 +27,8 @@ public:
 	//camera
 	//TODO
 	
-	bool loadScene(std::string _path){
-		//load the materials
-		//TODO
-		
-		//load the objects (meshes and spheres)
-		//TODO
-		
-		//load the camera
-		//TODO
-		
-		return true;	//success
-	}
+	Scene();
+	~Scene();
+	
+	bool loadScene(std::string);
 };

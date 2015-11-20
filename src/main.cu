@@ -9,9 +9,12 @@ int main(int argc, char *argv[]){
 	
 	printf("Hello, CUDA world!\n");
 	
-	testGLM();
+	//testGLM();
 	
-	testCUDA();
+	//testCUDA();
+	
+	//testMeshOBJLoad(std::string("scenes/tetrahedron.obj"));
+	testMeshOBJLoad(std::string("scenes/cube.obj"));
 	
 	if(argc < 2){
 		printf("ERROR: please specify a scene to render: %s <scene.txt> [<output.png>]\n", argv[0]);
