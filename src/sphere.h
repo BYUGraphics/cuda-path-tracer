@@ -14,20 +14,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include "sphere.inl"
 
-class Sphere{
-public:
-	//position
-	glm::vec4 position;
-	//radius
-	float radius;
-	//material index
-	int materialIdx;
-	
-	Sphere(float _rad, glm::vec4 _pos, int _matIdx){
-		radius = _rad;
-		position = glm::vec4(_pos);
-		materialIdx = _matIdx;
+
+namespace Sphere{
+	void printSphere(Sphere *_sphere){
+		//TODO
 	}
 	
-};
+	Sphere* createSphere(glm::vec3 _pos, float _radius, int _matIdx){
+		//allocate a Sphere struct
+		Sphere *result = (Sphere*)malloc(sizeof(Sphere));
+		//set the position and radius
+		result->position = _pos;
+		result->radius = _radius;
+		//set the material index
+		result->materialIdx = _matIdx;
+		
+		return result;
+	}
+	
+}

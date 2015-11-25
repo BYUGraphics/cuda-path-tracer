@@ -6,9 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#include <mesh.h>
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
+#include "mesh.h"
+#include "scene.h"
 
 double When(){
     struct timeval tp;
@@ -136,6 +135,24 @@ void testThrust(){
 	//copy it to the device
 }*/
 
+void testSceneCreate(){
+	Scene::Scene *theScene = Scene::createScene(std::string("whatever"));
+	Scene::printSceneInfo(theScene);
+}
+
+void testSceneCopyToDevice(){
+	//create a scene on the host
+	Scene::Scene *h_scn1 = Scene::createScene(std::string("whatever"));
+	//copy it to the device
+	Scene::Scene *d_scn = Scene::copySceneToDevice(h_scn1);
+	//create a new scene on the host
+	Scene::Scene *h_scn2 = (Scene::Scene*)malloc(sizeof(Scene::Scene));
+	//copy the device scene into the new host scene
+	cudaMemcpy(h_scn2, d_scn, sizeof(Scene::Scene), cudaMemcpyDeviceToHost);
+	//see if the sphere is still there
+	Scene::printSceneInfo(h_scn2);
+}
+
 void testMeshOBJLoad(std::string _filename){
 	//load tetrahedron.obj
 	double start = When();
@@ -151,3 +168,18 @@ void testMeshOBJLoad(std::string _filename){
 	//print its faces
 	//Mesh::printFaces(shape);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
