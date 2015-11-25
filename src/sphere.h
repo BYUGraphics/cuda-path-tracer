@@ -8,6 +8,8 @@
 */
 
 #pragma once
+#define GLM_FORCE_CUDA
+#include <cuda.h>
 #include <glm/glm.hpp>
 #include <stdio.h>
 #include <stdlib.h>
