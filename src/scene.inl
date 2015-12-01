@@ -7,11 +7,12 @@
 namespace Scene{
 	
 	struct Scene{
-		int numMeshes, numSpheres, numTextures, numMaterials;
+		int numMeshes, numSpheres, numTextures, numMaterials, numLights;
 		//meshes
 		Mesh::Mesh *meshes;
 		//spheres
 		Sphere::Sphere *spheres;
+		//lights
 		//materials
 		//textures
 		//camera

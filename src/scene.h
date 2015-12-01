@@ -29,33 +29,118 @@ namespace Scene{
 		printf("Materials: %d\n", _scene->numMaterials);
 		printf("Textures: %d\n", _scene->numTextures);
 	}
+
+	glm::vec3 read_vector(std::stringstream& ss)
+	{
+		std::string x, y, z;
+		ss >> x >> y >> z;
+		return glm::vec3(atof(x.c_str()), atof(y.c_str()), atof(z.c_str()));
+	}
 	
 	Scene* createScene(std::string _filename){
 		//make a new Scene struct
 		Scene *result = (Scene*)malloc(sizeof(Scene));
+		// std::cout << result << std::endl;
+		// std::cout << "size " << sizeof(Scene) << std::endl;
 		//load the materials
 		//TODO
+		std::vector<Mesh::Mesh> meshes;
+		std::vector<Sphere::Sphere> spheres;
 		result->numMaterials = 0;
 		result->numTextures = 0;
+		result->numMeshes = 0;
+		result->numSpheres = 0;
+		result->numLights = 0;
+		FILE *objfile = fopen(_filename.c_str(), "r");
+		if(objfile==NULL)
+		{
+			std::cout << "Error loading file " << _filename << std::endl;
+		}
+		char line[256];
+		while (fgets(line, sizeof(line), objfile))
+		{
+			std::stringstream ss;
+			ss << line;
+			std::string tok;
+			ss >> tok;
+			if(tok[0]=='#')
+			{
+				continue;
+			}
+			if(tok=="c")
+			{
+				std::cout << "creating camera" << std::endl;
+				std::string width_str, height_str, fov_str, samples_str;
+				ss >> width_str >> height_str >> fov_str >> samples_str;
+				// TODO: create camera
+			}
+			if(tok=="m")
+			{
+				std::cout << "creating material" << std::endl;
+				glm::vec3 diff = read_vector(ss);
+				glm::vec3 refl = read_vector(ss);
+				glm::vec3 refr = read_vector(ss);
+				glm::vec3 emit = read_vector(ss);
+				std::string sdiff, srefl, srefr, semit, sior;
+				ss >> sdiff >> srefl >> srefr >> semit >> sior;
+				// TODO: create material
+				char peek = ss.peek();
+				while(peek==' ')
+				{
+					ss.get();
+					peek = ss.peek();
+				}
+				if(ss.peek()!='\n')
+				{
+					std::string map;
+					ss >> map;
+					// TODO: create pixelmap, add to material
+					result->numTextures++;
+				}
+				result->numMaterials++;
+			}
+			if(tok=="o")
+			{
+				std::cout << "creating mesh" << std::endl;
+				std::string objfile, smtl;
+				ss >> objfile >> smtl;
+				// TODO: create mesh
+				// std::cout << "numMeshes " << &(result->numMeshes) << std::endl;
+				// result->numMeshes++; // causes segfault, no idea why
+			}
+			if(tok=="s")
+			{
+				std::cout << "creating sphere" << std::endl;
+				std::string sradius, smtl;
+				ss >> sradius >> smtl;
+				glm::vec3 s_pos = read_vector(ss);
+				// TODO: create sphere
+				Sphere::Sphere tmp;
+				tmp.position = s_pos;
+				tmp.radius = atof(sradius.c_str());
+				tmp.materialIdx = atoi(smtl.c_str());
+				spheres.push_back(tmp);
+				result->numSpheres++;
+				// TODO: if material has emit>0, add to light list
+				
+			}	
+		}
 		
-		std::vector<Mesh::Mesh> meshes;
 		//for each mesh
 			//make a mesh object
 			//add it to this->meshes
-		result->numMeshes = 0;
 		
 		//for each sphere
 			//make a sphere object
 			//add it to this->spheres
-		std::vector<Sphere::Sphere> spheres;
 		//for testing
-		Sphere::Sphere tmp;
-		tmp.position = glm::vec3();
-		tmp.radius = 1.f;
-		tmp.materialIdx = 0;
-		spheres.push_back(tmp);
+		// Sphere::Sphere tmp;
+		// tmp.position = glm::vec3();
+		// tmp.radius = 1.f;
+		// tmp.materialIdx = 0;
+		// spheres.push_back(tmp);
 		//end testing
-		result->numSpheres = spheres.size(); //find out how many there are
+		// result->numSpheres = spheres.size(); //find out how many there are
 		size_t spheresMemSize = spheres.size() * sizeof(Sphere::Sphere); //figure out how much memory it will take
 		result->spheres = (Sphere::Sphere*)malloc(spheresMemSize); //allocate space
 		memcpy(result->spheres, spheres.data(), spheresMemSize); //copy the data into the array

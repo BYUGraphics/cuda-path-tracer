@@ -37,6 +37,8 @@ int main(int argc, char *argv[]){
 	
 	//load the scene
 	Scene::Scene *h_scene = Scene::createScene(std::string(argv[1]));
+
+	Scene::printSceneInfo(h_scene);
 	
 	//pass all of the scene data to the GPU
 	Scene::Scene *d_scene = Scene::copySceneToDevice(h_scene);
