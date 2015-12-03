@@ -196,7 +196,6 @@ namespace Scene{
 		//allocate space for the camera
 		//TODO
 		
-		//delete the host's copy of the scene?
 		
 		return d_scene;
 	}
