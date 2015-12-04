@@ -113,12 +113,6 @@ namespace Mesh{
 		return true;
 	}
 	
-	__device__ bool intersectAABB(glm::vec3 _min, glm::vec3 _max, glm::vec3 _rayPos, glm::vec3 _rayDir, float &_intrsctDist){
-		//do a regular-old ray-box intersection test
-		_intrsctDist = -1.f;
-		return false;
-	}
-	
 	//device function intersect mesh()
 	__device__ bool intersectMesh(Mesh *_mesh, glm::vec3 _rayPos, glm::vec3 _rayDir, float &_intrsctDist, glm::vec3 &_intrsctNorm, glm::vec2 &_texCoord, int &_matIdx){
 		//For now, loop through all the primitives and return the closest intersection
