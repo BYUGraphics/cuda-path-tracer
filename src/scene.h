@@ -167,18 +167,72 @@ namespace Scene{
 		cudaMalloc((void**) &d_meshes, _scene->numMeshes * sizeof(Mesh::Mesh));
 		//copy the meshes to the device (doesn't copy the vertices, normals, faces, etc.)
 		cudaMemcpy(d_meshes, _scene->meshes, _scene->numMeshes * sizeof(Mesh::Mesh), cudaMemcpyHostToDevice);
-		//copy the d_meshes pointer to the d_scene meshes pointer
+		//copy the d_meshes pointer to the d_scene.meshes pointer
 		cudaMemcpy(&(d_scene->meshes), &d_meshes, sizeof(Mesh::Mesh*), cudaMemcpyHostToDevice);
 		//for each mesh
+		for(int m = 0, numMeshes = _scene->numMeshes; m < numMeshes; m++){
+			Mesh::Mesh *curMesh = &(_scene->meshes[m]);
+			//allocate space for vertices
+			glm::vec3 *d_verts;
+			cudaMalloc((void**) &d_verts, curMesh->numVerts * sizeof(glm::vec3));
 			//copy the vertices to the device
-			//copy the faces to the device
+			cudaMemcpy(d_verts, curMesh->vertices, curMesh->numVerts * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+			//copy the d_verts pointer to the d_scene->meshes[m].vertices pointer
+			cudaMemcpy(&(d_scene->meshes[m].vertices), &d_verts, sizeof(glm::vec3*), cudaMemcpyHostToDevice);
+			
+			//allocate space for uvs
+			glm::vec2 *d_uvs;
+			cudaMalloc((void**) &d_uvs, curMesh->numUVs * sizeof(glm::vec2));
 			//copy the uvs to the device
+			cudaMemcpy(d_uvs, curMesh->uvs, curMesh->numUVs * sizeof(glm::vec2), cudaMemcpyHostToDevice);
+			//copy the d_uvs pointer to the d_scene->meshes[m].uvs pointer
+			cudaMemcpy(&(d_scene->meshes[m].uvs), &d_uvs, sizeof(glm::vec2*), cudaMemcpyHostToDevice);
+			
+			//allocate space for normals
+			glm::vec3 *d_normals;
+			cudaMalloc((void**) &d_normals, curMesh->numNormals * sizeof(glm::vec3));
 			//copy the normals to the device
+			cudaMemcpy(d_normals, curMesh->normals, curMesh->numNormals * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+			//copy the d_normals pointer to the d_scene->meshes[m].normals pointer
+			cudaMemcpy(&(d_scene->meshes[m].normals), &d_normals, sizeof(glm::vec3*), cudaMemcpyHostToDevice);
+			
+			//allocate space for faces
+			Mesh::Face *d_faces;
+			cudaMalloc((void**) &d_faces, curMesh->numFaces * sizeof(Mesh::Face));
+			//copy the faces to the device
+			cudaMemcpy(d_faces, curMesh->faces, curMesh->numFaces * sizeof(Mesh::Face), cudaMemcpyHostToDevice);
+			//copy the d_faces pointer to the d_scene->meshes[m].faces pointer
+			cudaMemcpy(&(d_scene->meshes[m].faces), &d_faces, sizeof(Mesh::Face*), cudaMemcpyHostToDevice);
 			//for each face
+			for(int f = 0, numFaces = curMesh->numFaces; f < numFaces; f++){
+				Mesh::Face *curFace = &(curMesh->faces[f]);
+				//allocate space for vertex indices
+				int *d_vertIdxs;
+				cudaMalloc((void**) &d_vertIdxs, curFace->numVertices * sizeof(int));
 				//copy the vertex indices to the device
+				cudaMemcpy(d_vertIdxs, curFace->verts, curFace->numVertices * sizeof(int), cudaMemcpyHostToDevice);
+				//copy the d_vertIdxs pointer to the d_scene->mesh[m].faces[f].verts pointer
+				cudaMemcpy(&(d_scene->meshes[m].faces[f].verts), &d_vertIdxs, sizeof(int*), cudaMemcpyHostToDevice);
+				
+				//allocate space for normal indices
+				int *d_normIdxs;
+				cudaMalloc((void**) &d_normIdxs, curFace->numNormals * sizeof(int));
 				//copy the normal indices to the device
+				cudaMemcpy(d_normIdxs, curFace->normals, curFace->numNormals * sizeof(int), cudaMemcpyHostToDevice);
+				//copy the d_normIdxs pointer to the d_scene->mesh[m].faces[f].normals pointer
+				cudaMemcpy(&(d_scene->meshes[m].faces[f].normals), &d_normIdxs, sizeof(int*), cudaMemcpyHostToDevice);
+				
+				//allocate space for uv indices
+				int *d_uvIdxs;
+				cudaMalloc((void**) &d_uvIdxs, curFace->numUVs * sizeof(int));
 				//copy the uv indices to the device
+				cudaMemcpy(d_uvIdxs, curFace->uvs, curFace->numUVs * sizeof(int), cudaMemcpyHostToDevice);
+				//copy the d_normIdxs pointer to the d_scene->mesh[m].faces[f].uvs pointer
+				cudaMemcpy(&(d_scene->meshes[m].faces[f].uvs), &d_uvIdxs, sizeof(int*), cudaMemcpyHostToDevice);
+			}
+			
 			//we don't need to do anything fancy with the BVH since the device will do all the allocation of that stuff
+		}
 		
 		//allocate space for spheres
 		Sphere::Sphere *d_spheres;
