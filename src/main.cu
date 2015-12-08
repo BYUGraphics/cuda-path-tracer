@@ -3,8 +3,13 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <string>
+#include <math.h>
 #include "scene.h"
+#include "pixelmap.h"
+#include "trace.h"
 #include "buildBVH.inl"
+
+#define PI 3.141592653589
 
 int main(int argc, char *argv[]){
 	
@@ -47,13 +52,23 @@ int main(int argc, char *argv[]){
 	BVH::buildBVH(h_scene, d_scene);
 	
 	//render the image
+	Pixelmap::Pixelmap *h_ppm = Pixelmap::create_pixelmap(h_scene->width, h_scene->height);
+	glm::vec3 *d_pixels = Pixelmap::copyPixelmapToDevice(h_ppm);
+	int bucketSize = 16;
+	double xBuckets = (double)h_scene->width/(double)bucketSize;
+	double yBuckets = (double)h_scene->height/(double)bucketSize;
+	dim3 blocks((int)ceil(xBuckets), (int)ceil(yBuckets));
+	dim3 threads(bucketSize, bucketSize);
+	trace_scene<<<blocks, threads>>>(d_scene, d_pixels);
 	//TODO
 	
 	//copy the rendered image from the GPU to the host
 	//TODO
+	Pixelmap::copyPixelmapToHost(d_pixels, h_ppm);
 	
 	//save the image to disk
 	//TODO
+	Pixelmap::write_pixelmap("out.ppm", h_ppm);
 		
 	
 	return 0;

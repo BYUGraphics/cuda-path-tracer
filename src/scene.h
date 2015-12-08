@@ -11,6 +11,7 @@
 #define GLM_FORCE_CUDA
 #include <cuda.h>
 #include <glm/glm.hpp>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -28,6 +29,8 @@ namespace Scene{
 		printf("Spheres: %d\n", _scene->numSpheres);
 		printf("Materials: %d\n", _scene->numMaterials);
 		printf("Textures: %d\n", _scene->numTextures);
+		printf("Camera:\nwidth: %d\nheight: %d\nsamples: %d\nfov: %lf\n", 
+			   _scene->width, _scene->height, _scene->samples, _scene->fov);
 	}
 
 	glm::vec3 read_vector(std::stringstream& ss)
@@ -46,11 +49,11 @@ namespace Scene{
 		//TODO
 		std::vector<Mesh::Mesh> meshes;
 		std::vector<Sphere::Sphere> spheres;
-		result->numMaterials = 0;
-		result->numTextures = 0;
-		result->numMeshes = 0;
-		result->numSpheres = 0;
-		result->numLights = 0;
+		// result->numMaterials = 0;
+		// result->numTextures = 0;
+		// result->numMeshes = 0;
+		// result->numSpheres = 0;
+		// result->numLights = 0;
 		FILE *objfile = fopen(_filename.c_str(), "r");
 		if(objfile==NULL)
 		{
@@ -70,9 +73,13 @@ namespace Scene{
 			if(tok=="c")
 			{
 				std::cout << "creating camera" << std::endl;
-				std::string width_str, height_str, fov_str, samples_str;
-				ss >> width_str >> height_str >> fov_str >> samples_str;
+				std::string width_str, height_str, samples_str, fov_str;
+				ss >> width_str >> height_str >> samples_str >> fov_str;
 				// TODO: create camera
+				result->width = atoi(width_str.c_str());
+				result->height = atoi(height_str.c_str());
+				result->samples = atoi(samples_str.c_str());
+				result->fov = atof(fov_str.c_str());
 			}
 			if(tok=="m")
 			{
@@ -95,9 +102,9 @@ namespace Scene{
 					std::string map;
 					ss >> map;
 					// TODO: create pixelmap, add to material
-					result->numTextures++;
+					// result->numTextures++;
 				}
-				result->numMaterials++;
+				// result->numMaterials++;
 			}
 			if(tok=="o")
 			{
@@ -120,11 +127,17 @@ namespace Scene{
 				tmp.radius = atof(sradius.c_str());
 				tmp.materialIdx = atoi(smtl.c_str());
 				spheres.push_back(tmp);
-				result->numSpheres++;
+				// result->numSpheres++;
 				// TODO: if material has emit>0, add to light list
 				
 			}	
 		}
+		
+		result->numMaterials = 0;
+		result->numTextures = 0;
+		result->numMeshes = 0;
+		result->numSpheres = spheres.size();
+		result->numLights = 0;
 		
 		//for each mesh
 			//make a mesh object
@@ -148,7 +161,15 @@ namespace Scene{
 		
 		
 		//load the camera
-		//TODO
+		//TODO look_from ?
+		double fov = result->fov * (M_PI/180.0);//radians
+		double aspect_ratio = (double)result->height/(double)result->width;
+
+		//calculate image plane size in world space
+		result->scene_width = tan(fov/2)*2;
+		result->scene_height = tan((fov*aspect_ratio)/2)*2;
+		result->pixel_width = result->scene_width/result->width;
+		result->pixel_slice = result->pixel_width/result->samples;
 		
 		return result;
 	}

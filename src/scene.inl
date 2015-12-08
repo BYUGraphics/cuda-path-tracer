@@ -16,6 +16,9 @@ namespace Scene{
 		//materials
 		//textures
 		//camera
+		int width, height, samples;
+		double fov;
+		double scene_width, scene_height, pixel_width, pixel_slice;
 	};
 	
 	//This function assumes that _rayDir is normalized and that _intrsctNorm and _texCoord have been initialized
