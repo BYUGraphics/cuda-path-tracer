@@ -23,7 +23,7 @@ namespace Scene{
 	
 	//This function assumes that _rayDir is normalized and that _intrsctNorm and _texCoord have been initialized
 	//This function returns whether or not a scene object was intersected
-	__device__ bool intersectScene(Scene *_scene, glm::vec3 _rayOrig, glm::vec3 _rayDir, float &_intrsctDist, glm::vec3 &_intrsctNorm, glm::vec2 &_texCoord, int &_matIdx){
+	__device__ bool intersectScene(Scene *_scene, glm::vec3 _rayOrig, glm::vec3 _rayDir, float *_intrsctDist, glm::vec3 *_intrsctNorm, glm::vec2 *_texCoord, int *_matIdx){
 		int i;	//shared memory?
 		float minDist = -1.f, tmpDist;	//shared memory?
 		glm::vec3 minNormal, tmpNormal;	//shared memory?
@@ -35,7 +35,7 @@ namespace Scene{
 		//for each sphere
 		for(i = 0; i < _scene->numSpheres; i++){
 			//intersect the sphere
-			tmpIntersected = Sphere::intersectSphere(&(_scene->spheres[i]), _rayOrig, _rayDir, tmpDist, tmpNormal, tmpTexCoord, tmpMatIdx);
+			tmpIntersected = Sphere::intersectSphere(&(_scene->spheres[i]), _rayOrig, _rayDir, &tmpDist, &tmpNormal, &tmpTexCoord, &tmpMatIdx);
 			didIntersect |= tmpIntersected;
 			//if the distance is >= 0 and less than the minimum distance
 			if(tmpIntersected && tmpDist >= 0.f && tmpDist < minDist){
@@ -51,7 +51,7 @@ namespace Scene{
 		//for each mesh
 		for(i = 0; i < _scene->numMeshes; i++){
 			//intersect the sphere
-			tmpIntersected = Mesh::intersectMesh(&(_scene->meshes[i]), _rayOrig, _rayDir, tmpDist, tmpNormal, tmpTexCoord, tmpMatIdx);
+			tmpIntersected = Mesh::intersectMesh(&(_scene->meshes[i]), _rayOrig, _rayDir, &tmpDist, &tmpNormal, &tmpTexCoord, &tmpMatIdx);
 			didIntersect |= tmpIntersected;
 			//if the distance is >= 0 and less than the minimum distance
 			if(tmpIntersected && tmpDist >= 0.f && tmpDist < minDist){
@@ -66,10 +66,13 @@ namespace Scene{
 		
 		
 		//populate _intrsctDist, _intrsctNorm, _texCoor, and _matIdx with the results
-		_intrsctDist = minDist;
-		_intrsctNorm = minNormal;
-		_texCoord = minTexCoord;
-		_matIdx = minMatIdx;
+		*(_intrsctDist) = minDist;
+		_intrsctNorm->x = minNormal.x;
+		_intrsctNorm->y = minNormal.y;
+		_intrsctNorm->z = minNormal.z;
+		_texCoord->x = minTexCoord.x;
+		_texCoord->y = minTexCoord.y;
+		*(_matIdx) = minMatIdx;
 		return didIntersect;
 	}
 }

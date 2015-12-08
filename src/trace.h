@@ -41,7 +41,7 @@ void __global__ trace_scene(Scene::Scene *_scene, glm::vec3 *_pixels)
                 glm::vec2 uv;
                 int matidx;
                 // intersectScene(_scene, look_from, dir, float &_intrsctDist, glm::vec3 &_intrsctNorm, glm::vec2 &_texCoord, int &_matIdx)
-                bool hit = intersectScene(_scene, look_from, dir, dist, norm, uv, matidx);
+                bool hit = intersectScene(_scene, look_from, dir, &dist, &norm, &uv, &matidx);
                 if (hit)
                 {
                     // int index = Pixelmap::index(_scene->width, x, y);

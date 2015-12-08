@@ -35,7 +35,7 @@ namespace Mesh{
 	//do a regular-old ray-triangle intersection test
 	//algorithm thanks to: https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 	//Finding texture coordinates thanks to: http://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
-	__device__ bool intersectTriangle(Mesh *_mesh, int _triIdx, glm::vec3 _rayOrig, glm::vec3 _rayDir, float &_intrsctDist, glm::vec3 &_intrsctNorm, glm::vec2 &_texCoord, int &_matIdx){
+	__device__ bool intersectTriangle(Mesh *_mesh, int _triIdx, glm::vec3 _rayOrig, glm::vec3 _rayDir, float *_intrsctDist, glm::vec3 *_intrsctNorm, glm::vec2 *_texCoord, int *_matIdx){
 		//maybe put the ray into the triangle's space
 		glm::vec3 e1, e2;
 		glm::vec3 P, Q, T;
@@ -85,7 +85,7 @@ namespace Mesh{
 		//WE'VE STRUCK TRIANGLE!!!!!!
 		
 		//if it got here, it's definitely inside the triangle
-		_intrsctDist = glm::dot(e2, Q) * inv_det;
+		*(_intrsctDist) = glm::dot(e2, Q) * inv_det;
 		
 		//compute smoothed normals
 		//surface normal = (1-u-v) * n0  +  u * n1  +  v * n2
@@ -94,9 +94,9 @@ namespace Mesh{
 		glm::vec3 n1 = normals[faces[_triIdx].normals[1]];
 		glm::vec3 n2 = normals[faces[_triIdx].normals[2]];
 		glm::vec3 norm = glm::normalize((1.f-u-v) * n0 + u * n1 + v * n2);
-		_intrsctNorm.x = norm.x;
-		_intrsctNorm.y = norm.y;
-		_intrsctNorm.z = norm.z;
+		_intrsctNorm->x = norm.x;
+		_intrsctNorm->y = norm.y;
+		_intrsctNorm->z = norm.z;
 		
 		//texture coord  = (1-u-v) * t0  +  u * t1  +  v * t2
 		glm::vec2 *uvs = _mesh->uvs;
@@ -104,17 +104,17 @@ namespace Mesh{
 		glm::vec2 t1 = uvs[faces[_triIdx].uvs[1]];
 		glm::vec2 t2 = uvs[faces[_triIdx].uvs[2]];
 		glm::vec2 texCoord = (1.f-u-v) * t0 + u * t1 + v * t2;
-		_texCoord.x = texCoord.x;
-		_texCoord.y = texCoord.y;
+		_texCoord->x = texCoord.x;
+		_texCoord->y = texCoord.y;
 		
 		//material index
-		_matIdx = _mesh->materialIdx;
+		*(_matIdx) = _mesh->materialIdx;
 		
 		return true;
 	}
 	
 	//device function intersect mesh()
-	__device__ bool intersectMesh(Mesh *_mesh, glm::vec3 _rayPos, glm::vec3 _rayDir, float &_intrsctDist, glm::vec3 &_intrsctNorm, glm::vec2 &_texCoord, int &_matIdx){
+	__device__ bool intersectMesh(Mesh *_mesh, glm::vec3 _rayPos, glm::vec3 _rayDir, float *_intrsctDist, glm::vec3 *_intrsctNorm, glm::vec2 *_texCoord, int *_matIdx){
 		//For now, loop through all the primitives and return the closest intersection
 		int i, numFaces;	//shared memory?
 		float minDist = -1.f, tmpDist;	//shared memory?
@@ -126,7 +126,7 @@ namespace Mesh{
 		
 		for(i = 0, numFaces = _mesh->numFaces; i < numFaces; i++){
 			//intersect the triangle
-			tmpIntrsct = intersectTriangle(_mesh, i, _rayPos, _rayDir, tmpDist, tmpNormal, tmpTexCoord, tmpMatIdx);
+			tmpIntrsct = intersectTriangle(_mesh, i, _rayPos, _rayDir, &tmpDist, &tmpNormal, &tmpTexCoord, &tmpMatIdx);
 			didIntersect |= tmpIntrsct;
 			//if the distance is >= 0 and less than the minimum distance
 			if(tmpIntrsct && tmpDist >= 0.f && tmpDist < minDist){
@@ -140,10 +140,13 @@ namespace Mesh{
 		}
 		
 		//populate _intrsctDist, _intrsctNorm, _texCoor, and _matIdx with the results
-		_intrsctDist = minDist;
-		_intrsctNorm = minNormal;
-		_texCoord = minTexCoord;
-		_matIdx = minMatIdx;
+		*(_intrsctDist) = minDist;
+		_intrsctNorm->x = minNormal.x;
+		_intrsctNorm->y = minNormal.y;
+		_intrsctNorm->z = minNormal.z;
+		_texCoord->x = minTexCoord.x;
+		_texCoord->y = minTexCoord.y;
+		*(_matIdx) = minMatIdx;
 		
 		return didIntersect;
 	}

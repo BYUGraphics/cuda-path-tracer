@@ -13,7 +13,7 @@ namespace Sphere{
 	
 	//this function assumes that _rayDir is normalized. It also assumes that _intrsctNorm and _texCoord have been initialized
 	//do a regular-old ray-sphere intersection test
-	__device__ bool intersectSphere(Sphere *_sphere, glm::vec3 _rayOrig, glm::vec3 _rayDir, float &_intrsctDist, glm::vec3 &_intrsctNorm, glm::vec2 &_texCoord, int &_matIdx){
+	__device__ bool intersectSphere(Sphere *_sphere, glm::vec3 _rayOrig, glm::vec3 _rayDir, float *_intrsctDist, glm::vec3 *_intrsctNorm, glm::vec2 *_texCoord, int *_matIdx){
 		//transform the ray into object space
 		_rayOrig -= _sphere->position;
 		
@@ -59,17 +59,17 @@ namespace Sphere{
 		}
 		
 		//store the intersection distance, normal, and material index
-		_intrsctDist = t0;
-		_matIdx = _sphere->materialIdx;
+		*(_intrsctDist) = t0;
+		*(_matIdx) = _sphere->materialIdx;
 		glm::vec3 pt = _rayOrig + t0 * _rayDir;
 		glm::vec3 norm = glm::normalize(pt - _sphere->position);
-		_intrsctNorm.x = norm.x;
-		_intrsctNorm.y = norm.y;
-		_intrsctNorm.z = norm.z;
+		_intrsctNorm->x = norm.x;
+		_intrsctNorm->y = norm.y;
+		_intrsctNorm->z = norm.z;
 		
 		//Get the sphere's texture coordinate
-		_texCoord.x = 0.f;
-		_texCoord.y = 0.f;
+		_texCoord->x = 0.f;
+		_texCoord->y = 0.f;
 		//TODO
 		
 		return true;
