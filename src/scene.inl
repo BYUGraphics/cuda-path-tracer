@@ -23,9 +23,9 @@ namespace Scene{
 	
 	//This function assumes that _rayDir is normalized and that _intrsctNorm and _texCoord have been initialized
 	//This function returns whether or not a scene object was intersected
-	__device__ bool intersectScene(Scene *_scene, glm::vec3 _rayOrig, glm::vec3 _rayDir, float *_intrsctDist, glm::vec3 *_intrsctNorm, glm::vec2 *_texCoord, int *_matIdx){
+	__device__ bool intersectScene(Scene *_scene, glm::vec3 _rayOrig, glm::vec3 _rayDir, float *_intrsctDist, glm::vec3 *_intrsctNorm, glm::vec2 *_texCoord, int *_matIdx){		
 		int i;	//shared memory?
-		float minDist = -1.f, tmpDist;	//shared memory?
+		float minDist = 1e30f, tmpDist;	//shared memory?
 		glm::vec3 minNormal, tmpNormal;	//shared memory?
 		glm::vec2 minTexCoord, tmpTexCoord;	//shared memory?
 		int minMatIdx, tmpMatIdx;	//shared memory?
@@ -42,12 +42,16 @@ namespace Scene{
 				//set the minimum distance to the new distance
 				minDist = tmpDist;
 				//set the normal, UV, and material to the new ones
-				minNormal = tmpNormal;
-				minTexCoord = tmpTexCoord;
+				minNormal.x = tmpNormal.x;
+				minNormal.y = tmpNormal.y;
+				minNormal.z = tmpNormal.z;
+				minTexCoord.x = tmpTexCoord.x;
+				minTexCoord.y = tmpTexCoord.y;
 				minMatIdx = tmpMatIdx;
 			}
 		}
-			
+		
+		
 		//for each mesh
 		for(i = 0; i < _scene->numMeshes; i++){
 			//intersect the sphere
@@ -58,8 +62,11 @@ namespace Scene{
 				//set the minimum distance to the new distance
 				minDist = tmpDist;
 				//set the normal, UV, and material to the new ones
-				minNormal = tmpNormal;
-				minTexCoord = tmpTexCoord;
+				minNormal.x = tmpNormal.x;
+				minNormal.y = tmpNormal.y;
+				minNormal.z = tmpNormal.z;
+				minTexCoord.x = tmpTexCoord.x;
+				minTexCoord.y = tmpTexCoord.y;
 				minMatIdx = tmpMatIdx;
 			}
 		}
