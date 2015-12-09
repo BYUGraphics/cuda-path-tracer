@@ -1,5 +1,6 @@
 #pragma once
 #include "mesh.inl"
+#include "material.inl"
 //scene.inl
 //11/24/15
 
@@ -13,12 +14,15 @@ namespace Scene{
 		//spheres
 		Sphere::Sphere *spheres;
 		//lights
+		Sphere::Sphere *lights;
 		//materials
+		Material::Material *materials;
 		//textures
 		//camera
 		int width, height, samples;
-		double fov;
-		double scene_width, scene_height, pixel_width, pixel_slice;
+		float fov;
+		float scene_width, scene_height, pixel_width, pixel_slice;
+		int max_depth;
 	};
 	
 	//This function assumes that _rayDir is normalized and that _intrsctNorm and _texCoord have been initialized

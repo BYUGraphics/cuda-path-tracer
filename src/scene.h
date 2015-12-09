@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include "scene.inl"
+#include "material.inl"
 
 namespace Scene{
 	void printSceneInfo(Scene *_scene){
@@ -49,6 +50,8 @@ namespace Scene{
 		//TODO
 		std::vector<Mesh::Mesh> meshes;
 		std::vector<Sphere::Sphere> spheres;
+		std::vector<Sphere::Sphere> lights;
+		std::vector<Material::Material> materials;
 		// result->numMaterials = 0;
 		// result->numTextures = 0;
 		// result->numMeshes = 0;
@@ -76,10 +79,11 @@ namespace Scene{
 				std::string width_str, height_str, samples_str, fov_str;
 				ss >> width_str >> height_str >> samples_str >> fov_str;
 				// TODO: create camera
-				result->width = atoi(width_str.c_str());
-				result->height = atoi(height_str.c_str());
-				result->samples = atoi(samples_str.c_str());
+				result->width = 160;//atoi(width_str.c_str());
+				result->height = 112;//atoi(height_str.c_str());
+				result->samples = 1;//atoi(samples_str.c_str());
 				result->fov = atof(fov_str.c_str());
+				result->max_depth = 2;
 			}
 			if(tok=="m")
 			{
@@ -91,6 +95,17 @@ namespace Scene{
 				std::string sdiff, srefl, srefr, semit, sior;
 				ss >> sdiff >> srefl >> srefr >> semit >> sior;
 				// TODO: create material
+				Material::Material tmpmat;
+				tmpmat.cdiff = diff;
+				tmpmat.crefl = refl;
+				tmpmat.crefr = refr;
+				tmpmat.cemit = emit;
+				tmpmat.diff = atof(sdiff.c_str());
+				tmpmat.refl = atof(srefl.c_str());
+				tmpmat.refr = atof(srefr.c_str());
+				tmpmat.emit = atof(semit.c_str());
+				tmpmat.ior = atof(sior.c_str());
+
 				char peek = ss.peek();
 				while(peek==' ')
 				{
@@ -102,9 +117,8 @@ namespace Scene{
 					std::string map;
 					ss >> map;
 					// TODO: create pixelmap, add to material
-					// result->numTextures++;
 				}
-				// result->numMaterials++;
+				materials.push_back(tmpmat);
 			}
 			if(tok=="o")
 			{
@@ -121,7 +135,6 @@ namespace Scene{
 				std::string sradius, smtl;
 				ss >> sradius >> smtl;
 				glm::vec3 s_pos = read_vector(ss);
-				// TODO: create sphere
 				Sphere::Sphere tmp;
 				tmp.position = s_pos;
 				tmp.radius = atof(sradius.c_str());
@@ -129,15 +142,19 @@ namespace Scene{
 				spheres.push_back(tmp);
 				// result->numSpheres++;
 				// TODO: if material has emit>0, add to light list
+				if(materials[tmp.materialIdx].emit>0)
+				{
+					lights.push_back(tmp);
+				}
 				
 			}	
 		}
 		
-		result->numMaterials = 0;
+		result->numMaterials = materials.size();
 		result->numTextures = 0;
 		result->numMeshes = 0;
 		result->numSpheres = spheres.size();
-		result->numLights = 0;
+		result->numLights = lights.size();
 		
 		//for each mesh
 			//make a mesh object
@@ -158,16 +175,22 @@ namespace Scene{
 		result->spheres = (Sphere::Sphere*)malloc(spheresMemSize); //allocate space
 		memcpy(result->spheres, spheres.data(), spheresMemSize); //copy the data into the array
 		
+		size_t lightsMemSize = lights.size() * sizeof(Sphere::Sphere);
+		result->lights = (Sphere::Sphere*)malloc(lightsMemSize);
+		memcpy(result->lights, lights.data(), lightsMemSize);
+
+		size_t materialsMemSize = materials.size() * sizeof(Material::Material);
+		result->materials = (Material::Material*)malloc(materialsMemSize);
+		memcpy(result->materials, materials.data(), materialsMemSize);
 		
 		
 		//load the camera
-		//TODO look_from ?
 		double fov = result->fov * (M_PI/180.0);//radians
 		double aspect_ratio = (double)result->height/(double)result->width;
 
 		//calculate image plane size in world space
-		result->scene_width = tan(fov/2)*2;
-		result->scene_height = tan((fov*aspect_ratio)/2)*2;
+		result->scene_width = tan(fov/2.f)*2.f;
+		result->scene_height = tan((fov*aspect_ratio)/2.f)*2.f;
 		result->pixel_width = result->scene_width/result->width;
 		result->pixel_slice = result->pixel_width/result->samples;
 		
@@ -263,9 +286,18 @@ namespace Scene{
 		//copy the d_spheres pointer to the d_scene spheres pointer
 		cudaMemcpy(&(d_scene->spheres), &d_spheres, sizeof(Sphere::Sphere*), cudaMemcpyHostToDevice);
 		
-		
+		//allocate space fo lights
+		Sphere::Sphere *d_lights;
+		cudaMalloc((void**) &d_lights, _scene->numLights * sizeof(Sphere::Sphere));
+		cudaMemcpy(d_lights, _scene->lights, _scene->numLights * sizeof(Sphere::Sphere), cudaMemcpyHostToDevice);
+		cudaMemcpy(&d_scene->lights, &d_lights, sizeof(Sphere::Sphere*), cudaMemcpyHostToDevice);
+
 		//allocate space for materials
-		//TODO
+		Material::Material *d_materials;
+		cudaMalloc((void**) &d_materials, _scene->numMaterials * sizeof(Material::Material));
+		cudaMemcpy(d_materials, _scene->materials, _scene->numMaterials * sizeof(Material::Material), cudaMemcpyHostToDevice);
+		cudaMemcpy(&d_scene->materials, &d_materials, sizeof(Material::Material*), cudaMemcpyHostToDevice);
+
 		//allocate space for textures
 		//TODO
 		//allocate space for the camera

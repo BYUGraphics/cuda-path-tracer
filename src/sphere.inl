@@ -71,7 +71,7 @@ namespace Sphere{
 		_texCoord->x = 0.f;
 		_texCoord->y = 0.f;
 		//TODO
-		
+		if(*(_intrsctDist)>10000.f) printf("rayOrig: %.4f, %.4f, %.4f\nrayDir: %.4f, %.4f, %.4f\na: %.4f, b: %.4f, c: %.4f, q: %.4f, discSqrt: %.4f, t0: %.4f, t1: %.4f, _intrsctDist: %.4f\n\n", _rayOrig.x, _rayOrig.y, _rayOrig.z, _rayDir.x, _rayDir.y, _rayDir.z, a, b, c, q, discSqrt, t0, t1, *(_intrsctDist));
 		return true;
 	}
 	
