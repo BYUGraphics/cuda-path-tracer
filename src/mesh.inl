@@ -2,6 +2,12 @@
 //mesh.inl
 //11/24/15
 
+//Flag for whether to use the BVH or to simply iterate over all the
+//triangles in the mesh when calculating the closest intersection.
+//Comment this out if you don't want to use the BVH.
+//#define USE_BVH
+
+
 //include glm
 #include <glm/glm.hpp>
 //include bvh nodes
@@ -124,6 +130,10 @@ namespace Mesh{
 		bool didIntersect = false;	//shared memory?
 		bool tmpIntrsct;	//shared memory?
 		
+	#ifdef USE_BVH
+		//TODO: Traverse the BVH to find the closest intersection
+	#else
+		//iterate over all the triangles to find the closest intersection
 		for(i = 0, numFaces = _mesh->numFaces; i < numFaces; i++){
 			//intersect the triangle
 			tmpIntrsct = intersectTriangle(_mesh, i, _rayPos, _rayDir, &tmpDist, &tmpNormal, &tmpTexCoord, &tmpMatIdx);
@@ -138,6 +148,7 @@ namespace Mesh{
 				minMatIdx = tmpMatIdx;
 			}
 		}
+	#endif
 		
 		//populate _intrsctDist, _intrsctNorm, _texCoor, and _matIdx with the results
 		*(_intrsctDist) = minDist;

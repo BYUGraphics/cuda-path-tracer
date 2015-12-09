@@ -6,10 +6,26 @@
 
 namespace BVH{
 	
+	//this struct just helps us sort the morton codes and object ids at the same time
+	struct MortonPlusFaceID{
+		unsigned int mortonCode;
+		int faceIdx;
+	};
+	
 	struct BVHnode{
+		bool isLeaf;
 		//int left child
 		//int right child
 		int left, right;
+		//whether each child is a leaf node
+		bool leftIsLeaf, rightIsLeaf;
+		//the index of the parent node (useful when calculating the bounding boxes)
+		int parent;
+		//a lock for accessing the node and calculating its bounding box
+		//initially set to -1, but then set to the ID of the first node that gets the lock
+		int nodeLock;
+		//initially set to false, but set to true once min and max have been calculated
+		bool boundsSet;
 		//vec3 min bounds
 		glm::vec3 min;
 		//vec3 max bounds

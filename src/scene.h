@@ -105,7 +105,7 @@ namespace Scene{
 				tmpmat.refr = atof(srefr.c_str());
 				tmpmat.emit = atof(semit.c_str());
 				tmpmat.ior = atof(sior.c_str());
-
+				
 				char peek = ss.peek();
 				while(peek==' ')
 				{
@@ -275,7 +275,7 @@ namespace Scene{
 				cudaMemcpy(&(d_scene->meshes[m].faces[f].uvs), &d_uvIdxs, sizeof(int*), cudaMemcpyHostToDevice);
 			}
 			
-			//we don't need to do anything fancy with the BVH since the device will do all the allocation of that stuff
+			//we don't need to do anything fancy with the BVH since that is taken care of in buildBVH.inl
 		}
 		
 		//allocate space for spheres
@@ -297,7 +297,7 @@ namespace Scene{
 		cudaMalloc((void**) &d_materials, _scene->numMaterials * sizeof(Material::Material));
 		cudaMemcpy(d_materials, _scene->materials, _scene->numMaterials * sizeof(Material::Material), cudaMemcpyHostToDevice);
 		cudaMemcpy(&d_scene->materials, &d_materials, sizeof(Material::Material*), cudaMemcpyHostToDevice);
-
+		
 		//allocate space for textures
 		//TODO
 		//allocate space for the camera
