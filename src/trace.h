@@ -28,10 +28,10 @@ glm::vec3 __device__ trace_path(Scene::Scene *_scene, glm::vec3 *_pixels, glm::v
     // {
     //     return color;
     // }
-    float dist;
-    glm::vec3 norm(0.f);
-    glm::vec2 uv(0.f);
-    int matidx;
+    // float dist;
+    // glm::vec3 norm(0.f);
+    // glm::vec2 uv(0.f);
+    // int matidx;
 
     glm::vec3 direction = dir;
     glm::vec3 origin = orig;
@@ -39,11 +39,12 @@ glm::vec3 __device__ trace_path(Scene::Scene *_scene, glm::vec3 *_pixels, glm::v
     for(int i=0; i<_scene->max_depth; i++)
     {
         // intersectScene(_scene, look_from, dir, float &_intrsctDist, glm::vec3 &_intrsctNorm, glm::vec2 &_texCoord, int &_matIdx)
-        bool hit = Scene::intersectScene(_scene, origin, direction, &dist, &norm, &uv, &matidx);
-        if (hit)
+        // Hit::Hit hit = Scene::intersectScene(_scene, origin, direction, &dist, &norm, &uv, &matidx);
+        Hit::Hit hit = Scene::intersectScene(_scene, origin, direction);
+        if (hit.hit)
         {
             // calculate direct lighting for each light
-            glm::vec3 hit_pt = origin + direction*dist;
+            glm::vec3 hit_pt = origin + direction*hit.dist;
             for(int l=0; l<_scene->numLights; l++)
             {
                 // glm::vec3 l(0,1,0);
@@ -54,16 +55,16 @@ glm::vec3 __device__ trace_path(Scene::Scene *_scene, glm::vec3 *_pixels, glm::v
 
                 // if(index==259680) printf("normal: %f, %f, %f\n", norm.x, norm.y, norm.z);
                 glm::vec3 surface_color;
-                if(_scene->materials[matidx].diff>0.5)
+                if(_scene->materials[hit.matidx].diff>0.5)
                     surface_color = glm::vec3(1.f,0.f,0.f);//*glm::dot(norm, l)*3.f;
-                else if(_scene->materials[matidx].refl>0.5)
+                else if(_scene->materials[hit.matidx].refl>0.5)
                     surface_color = glm::vec3(1.f,0.f,0.f);//*glm::dot(norm, l)*3.f;
-                else if(_scene->materials[matidx].refr>0.5)
+                else if(_scene->materials[hit.matidx].refr>0.5)
                     surface_color = glm::vec3(1.f,0.f,0.f);//*glm::dot(norm, l)*3.f;
 
                 // TODO: shadow ray
 
-                float n_dot_l = glm::dot(norm, light_dir);
+                float n_dot_l = glm::dot(hit.norm, light_dir);
                 if(n_dot_l<0.f) n_dot_l = 0.f;
                 color += surface_color * light_color * light_intensity * n_dot_l;
                 
@@ -77,17 +78,20 @@ glm::vec3 __device__ trace_path(Scene::Scene *_scene, glm::vec3 *_pixels, glm::v
             // printf("addpoint(geoself(), set(%.2f, %.2f, %.2f));\n", dist, 0.0f, 0.0f);
 
             // !===memory errors
-            printf("norm: %.2f, %.2f, %.2f\norig: %.2f, %.2f, %.2f\ndir: %.2f, %.2f, %.2f\ndist: %.2f\nhit_pt: %.2f, %.2f, %.2f\n\n", norm.x, norm.y, norm.z, origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, dist, hit_pt.x, hit_pt.y, hit_pt.z);
+            // printf("norm: %.2f, %.2f, %.2f\norig: %.2f, %.2f, %.2f\ndir: %.2f, %.2f, %.2f\ndist: %.2f\nhit_pt: %.2f, %.2f, %.2f\n\n", hit.norm.x, hit.norm.y, hit.norm.z, origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, hit.dist, hit_pt.x, hit_pt.y, hit_pt.z);
             
-            // glm::vec3 old_orig = origin;
-            // glm::vec3 old_dir = direction;
-            origin = hit_pt + norm*(0.000000000000000001f);//1e-30f
+            glm::vec3 old_orig = origin;
+            glm::vec3 old_dir = direction;
+            origin = hit_pt + hit.norm*(0.000000000000000001f);//1e-30f
             glm::vec3 inc = direction*(-1.f);
-            glm::vec3 tmpdir = norm*(glm::dot(norm, inc)*2.f) - inc;
-            direction = glm::normalize(tmpdir);
+            glm::vec3 tmpdir = hit.norm*(glm::dot(hit.norm, inc)*2.f) - inc;
+            tmpdir = glm::normalize(tmpdir);
+            direction.x = tmpdir.x;
+            direction.y = tmpdir.y;
+            direction.z = tmpdir.z;
 
             // !===values totally messed up
-            // printf("new_orig: %.2f, %.2f, %.2f\nnorm: %.2f, %.2f, %.2f\norig: %.2f, %.2f, %.2f\ndir: %.2f, %.2f, %.2f\ndist: %.2f\nhit_pt: %.2f, %.2f, %.2f\n\n", origin.x, origin.y, origin.z, norm.x, norm.y, norm.z, old_orig.x, old_orig.y, old_orig.z, old_dir.x, old_dir.y, old_dir.z, dist, hit_pt.x, hit_pt.y, hit_pt.z);
+            printf("new_orig: %.2f, %.2f, %.2f\nnorm: %.2f, %.2f, %.2f\norig: %.2f, %.2f, %.2f\ndir: %.2f, %.2f, %.2f\ndist: %.2f\nhit_pt: %.2f, %.2f, %.2f\n\n", origin.x, origin.y, origin.z, hit.norm.x, hit.norm.y, hit.norm.z, old_orig.x, old_orig.y, old_orig.z, old_dir.x, old_dir.y, old_dir.z, hit.dist, hit_pt.x, hit_pt.y, hit_pt.z);
 
             // printf("addpoint(geoself(), set(%.2f, %.2f, %.2f));\n", orig.x, orig.y, orig.z);
             // printf("addpoint(geoself(), set(%.2f, %.2f, %.2f));\n", hit_pt.x, hit_pt.y, hit_pt.z);
