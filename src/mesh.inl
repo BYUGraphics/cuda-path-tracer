@@ -120,10 +120,9 @@ namespace Mesh{
 	}
 	
 	//device function intersect mesh()
-	__device__ bool intersectMesh(Mesh *_mesh, glm::vec3 _rayPos, glm::vec3 _rayDir, float *_intrsctDist, glm::vec3 *_intrsctNorm, glm::vec2 *_texCoord, int *_matIdx){
+	__device__ bool intersectMesh(Mesh *_mesh, glm::vec3 _rayOrig, glm::vec3 _rayDir, float *_intrsctDist, glm::vec3 *_intrsctNorm, glm::vec2 *_texCoord, int *_matIdx){
 		//For now, loop through all the primitives and return the closest intersection
-		int i, numFaces;	//shared memory?
-		float minDist = -1.f, tmpDist;	//shared memory?
+		float minDist = 1e30f, tmpDist;	//shared memory?
 		glm::vec3 minNormal, tmpNormal;	//shared memory?
 		glm::vec2 minTexCoord, tmpTexCoord;	//shared memory?
 		int minMatIdx, tmpMatIdx;	//shared memory?
@@ -131,20 +130,37 @@ namespace Mesh{
 		bool tmpIntrsct;	//shared memory?
 		
 	#ifdef USE_BVH
-		//TODO: Traverse the BVH to find the closest intersection
+		//Traverse the BVH to find the closest intersection
+		tmpIntrsct = BVH::intersectBVH(&(_mesh->bvh), _rayOrig, _rayDir, &tmpDist, &tmpNormal, &tmpTexCoord, &tmpMatIdx);
+		didIntersect |= tmpIntrsct;
+		if(tmpIntrsct){
+			if(tmpDist < minDist){
+				//update the distance, normal, texture coordinate, and material index
+				minDist = tmpDist;
+				minNormal.x = tmpNormal.x;
+				minNormal.y = tmpNormal.y;
+				minNormal.z = tmpNormal.z;
+				minTexCoord.x = tmpTexCoord.x;
+				minTexCoord.y = tmpTexCoord.y;
+				minMatIdx = tmpMatIdx;
+			}
+		}
 	#else
+		int i, numFaces;
 		//iterate over all the triangles to find the closest intersection
 		for(i = 0, numFaces = _mesh->numFaces; i < numFaces; i++){
 			//intersect the triangle
-			tmpIntrsct = intersectTriangle(_mesh, i, _rayPos, _rayDir, &tmpDist, &tmpNormal, &tmpTexCoord, &tmpMatIdx);
+			tmpIntrsct = intersectTriangle(_mesh, i, _rayOrig, _rayDir, &tmpDist, &tmpNormal, &tmpTexCoord, &tmpMatIdx);
 			didIntersect |= tmpIntrsct;
 			//if the distance is >= 0 and less than the minimum distance
 			if(tmpIntrsct && tmpDist >= 0.f && tmpDist < minDist){
-				//set the minimum distance to the new distance
+				//update the distance, normal, texture coordinate, and material index
 				minDist = tmpDist;
-				//set the normal, UV, and material to the new ones
-				minNormal = tmpNormal;
-				minTexCoord = tmpTexCoord;
+				minNormal.x = tmpNormal.x;
+				minNormal.y = tmpNormal.y;
+				minNormal.z = tmpNormal.z;
+				minTexCoord.x = tmpTexCoord.x;
+				minTexCoord.y = tmpTexCoord.y;
 				minMatIdx = tmpMatIdx;
 			}
 		}

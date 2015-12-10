@@ -118,20 +118,22 @@ namespace BVH{
 		_mesh->bvh.internalNodes[_idx].max.x = max.x;
 		_mesh->bvh.internalNodes[_idx].max.y = max.y;
 		_mesh->bvh.internalNodes[_idx].max.z = max.z;
+		
+		_mesh->bvh.internalNodes[_idx].boundsSet = true;
 	}
 	
 	//This is where the BVH magic happens
-	__global__ void buildBVHhierarchy(Mesh::Mesh _mesh, unsigned int * _sortedMortonCodes, int *_sortedFaceIDs, int _numFaces){
+	__global__ void buildBVHhierarchy(Mesh::Mesh *_mesh, unsigned int * _sortedMortonCodes, int *_sortedFaceIDs, int _numFaces){
 		//assign your leaf node the sorted face ID
 		int idx = threadIdx.x;
 		int faceIdx = _sortedFaceIDs[idx];
-		_mesh.bvh.leafNodes[idx].isLeaf = true;
-		_mesh.bvh.leafNodes[idx].left = faceIdx;
+		_mesh->bvh.leafNodes[idx].isLeaf = true;
+		_mesh->bvh.leafNodes[idx].left = faceIdx;
 		//calculate the bounds of the triangle
-		Mesh::Face myFace = _mesh.faces[faceIdx];
+		Mesh::Face myFace = _mesh->faces[faceIdx];
 		glm::vec3 min = glm::vec3(1e30f);
 		glm::vec3 max = glm::vec3(-1e30f);
-		glm::vec3 *verts = _mesh.vertices;
+		glm::vec3 *verts = _mesh->vertices;
 		int i;
 		for(i = 0; i < 3; i++){
 			glm::vec3 tmpVert = verts[myFace.verts[i]];
@@ -145,22 +147,22 @@ namespace BVH{
 			max.z = glm::max(max.z, tmpVert.z);
 		}
 		//store the bounds in the BVH
-		_mesh.bvh.leafNodes[idx].min.x = min.x;
-		_mesh.bvh.leafNodes[idx].min.y = min.y;
-		_mesh.bvh.leafNodes[idx].min.z = min.z;
-		_mesh.bvh.leafNodes[idx].max.x = max.x;
-		_mesh.bvh.leafNodes[idx].max.y = max.y;
-		_mesh.bvh.leafNodes[idx].max.z = max.z;
-		_mesh.bvh.leafNodes[idx].boundsSet = true;
+		_mesh->bvh.leafNodes[idx].min.x = min.x;
+		_mesh->bvh.leafNodes[idx].min.y = min.y;
+		_mesh->bvh.leafNodes[idx].min.z = min.z;
+		_mesh->bvh.leafNodes[idx].max.x = max.x;
+		_mesh->bvh.leafNodes[idx].max.y = max.y;
+		_mesh->bvh.leafNodes[idx].max.z = max.z;
+		_mesh->bvh.leafNodes[idx].boundsSet = true;
 		
 		if(idx >= _numFaces - 1)return;	//we only need numFaces - 1 threads working to generate the internal nodes
 		
 		//***Construct internal nodes***
 		//set the internal node's lock to -1
-		_mesh.bvh.internalNodes[idx].nodeLock = -1;
-		_mesh.bvh.internalNodes[idx].parent = -1;
-		_mesh.bvh.internalNodes[idx].boundsSet = false;
-		_mesh.bvh.internalNodes[idx].isLeaf = false;
+		_mesh->bvh.internalNodes[idx].nodeLock = -1;
+		_mesh->bvh.internalNodes[idx].parent = -1;
+		_mesh->bvh.internalNodes[idx].boundsSet = false;
+		_mesh->bvh.internalNodes[idx].isLeaf = false;
 		
 		int myCode = _sortedMortonCodes[idx];
 		//determine my node's range
@@ -192,29 +194,29 @@ namespace BVH{
 		//if split == first
 		if(split == first){
 			//my left child is leafNodes[split]
-			_mesh.bvh.internalNodes[idx].left = split;
-			_mesh.bvh.internalNodes[idx].leftIsLeaf = true;
-			_mesh.bvh.leafNodes[split].parent = idx;
+			_mesh->bvh.internalNodes[idx].left = split;
+			_mesh->bvh.internalNodes[idx].leftIsLeaf = true;
+			_mesh->bvh.leafNodes[split].parent = idx;
 		}
 		else{
 			//my left child is internalNodes[split]
-			_mesh.bvh.internalNodes[idx].left = split;
-			_mesh.bvh.internalNodes[idx].leftIsLeaf = false;
-			_mesh.bvh.internalNodes[split].parent = idx;
+			_mesh->bvh.internalNodes[idx].left = split;
+			_mesh->bvh.internalNodes[idx].leftIsLeaf = false;
+			_mesh->bvh.internalNodes[split].parent = idx;
 		}
 		
 		//if split + 1 == last
 		if(split + 1 == last){
 			//my right child is leafNodes[split+1]
-			_mesh.bvh.internalNodes[idx].right = split + 1;
-			_mesh.bvh.internalNodes[idx].rightIsLeaf = true;
-			_mesh.bvh.leafNodes[split+1].parent = idx;
+			_mesh->bvh.internalNodes[idx].right = split + 1;
+			_mesh->bvh.internalNodes[idx].rightIsLeaf = true;
+			_mesh->bvh.leafNodes[split+1].parent = idx;
 		}
 		else{
 			//my right child is internalNodes[split+1]
-			_mesh.bvh.internalNodes[idx].right = split + 1;
-			_mesh.bvh.internalNodes[idx].rightIsLeaf = false;
-			_mesh.bvh.internalNodes[split+1].parent = idx;
+			_mesh->bvh.internalNodes[idx].right = split + 1;
+			_mesh->bvh.internalNodes[idx].rightIsLeaf = false;
+			_mesh->bvh.internalNodes[split+1].parent = idx;
 		}
 		
 		__syncthreads();	//important, but this only works if all threads are in the same block
@@ -224,25 +226,30 @@ namespace BVH{
 		bool dropOut = false;
 		while(curNodeIdx != -1 && !dropOut){
 			//if you don't get a lock on the parent
-			if(atomicExch(&(_mesh.bvh.internalNodes[curNodeIdx].nodeLock), idx) != -1){
+			if(atomicExch(&(_mesh->bvh.internalNodes[curNodeIdx].nodeLock), idx) != -1){
 				dropOut = true;
 			}
 			else{
 				//if this node's children aren't ready
-				if(!BVHnodeReadyToCalcBounds(&_mesh, curNodeIdx)){
+				if(!BVHnodeReadyToCalcBounds(_mesh, curNodeIdx)){
 					//put the -1 back into the lock
-					atomicExch(&(_mesh.bvh.internalNodes[curNodeIdx].nodeLock), -1);
+					atomicExch(&(_mesh->bvh.internalNodes[curNodeIdx].nodeLock), -1);
 					//set dropout to true
 					dropOut = true;
 				}
 				else{
 					//calculate the bounding box of this node by combining its two children
-					BVHnodeCalcBounds(&_mesh, curNodeIdx);
+					BVHnodeCalcBounds(_mesh, curNodeIdx);
 				}
 			}
 			//curNodeIdx = curNodeIdx's parent
-			curNodeIdx = _mesh.bvh.internalNodes[curNodeIdx].parent;
+			curNodeIdx = _mesh->bvh.internalNodes[curNodeIdx].parent;
 			__syncthreads();
+		}
+		
+		//make sure the BVH knows which mesh it belongs to
+		if(idx == 0){
+			_mesh->bvh.mesh = _mesh;
 		}
 	}
 	
@@ -302,7 +309,8 @@ namespace BVH{
 			cudaMalloc((void**) &d_leafNodes, numFaces * sizeof(BVHnode));
 			
 			//put the internal node and leaf node arrays into the Mesh
-			//TODO
+			cudaMemcpy(&(_d_scene->meshes[i].bvh.internalNodes), &d_internalNodes, sizeof(BVHnode*), cudaMemcpyHostToDevice);
+			cudaMemcpy(&(_d_scene->meshes[i].bvh.leafNodes), &d_leafNodes, sizeof(BVHnode*), cudaMemcpyHostToDevice);
 			
 			//allocate space for the morton codes
 			MortonPlusFaceID *d_mortonCodesPlusFaceIDs;
@@ -330,21 +338,17 @@ namespace BVH{
 			int *d_sortedFaceIdxs;
 			cudaMalloc((void**) &d_sortedFaceIdxs, numFaces * sizeof(int));
 			cudaMemcpy(d_sortedFaceIdxs, h_sortedFaceIdxs, numFaces * sizeof(int), cudaMemcpyHostToDevice);
+			//copy d_sortedFaceIdxs into the BVH
+			cudaMemcpy(&(_d_scene->meshes[i].bvh.sortedObjectIDs), &d_sortedFaceIdxs, sizeof(int*), cudaMemcpyHostToDevice);
 			
 			//build the BVH hiearchy
-			buildBVHhierarchy<<<1, numFaces>>>(_d_scene->meshes[i], d_sortedMortonCodes, d_sortedFaceIdxs, numFaces);
+			buildBVHhierarchy<<<1, numFaces>>>(&(_d_scene->meshes[i]), d_sortedMortonCodes, d_sortedFaceIdxs, numFaces);
 			
-			//calculate the bounding boxes for each BVH node (DEVICE)
-			//TODO
-			
-			
-			
-			
-			
-			
-			//cleanup:
-			//device morton codes
-			//host morton codes
+			//cleanup: TODO
+			//d_sortedMortonCodes
+			//h_sortedMortonCodes
+			//h_mortonCodesPlusFaceIDs
+			//h_sortedFaceIdxs
 		}
 		
 	}

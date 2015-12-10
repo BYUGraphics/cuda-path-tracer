@@ -1,6 +1,6 @@
 /*
 *	Scene namespace
-*	Author(s): Justin Jensen
+*	Author(s): Justin Jensen, Jeremy Oborn
 *	Date: 11/19/2015
 *
 *	This namespace loads a scene from a file and stores it in a Scene struct that makes it easy to pass all of the data to the GPU.
@@ -79,9 +79,9 @@ namespace Scene{
 				std::string width_str, height_str, samples_str, fov_str;
 				ss >> width_str >> height_str >> samples_str >> fov_str;
 				// TODO: create camera
-				result->width = 160;//atoi(width_str.c_str());
-				result->height = 112;//atoi(height_str.c_str());
-				result->samples = 1;//atoi(samples_str.c_str());
+				result->width = atoi(width_str.c_str());
+				result->height = atoi(height_str.c_str());
+				result->samples = atoi(samples_str.c_str());
 				result->fov = atof(fov_str.c_str());
 				result->max_depth = 2;
 			}
