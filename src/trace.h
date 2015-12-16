@@ -3,6 +3,7 @@
 #include <cuda.h>
 #include <glm/glm.hpp>
 #include <stdlib.h>
+#include <stdio.h>
 #include "scene.h"
 
 //returns a random double between -0.5 and 0.5
@@ -24,82 +25,104 @@ glm::vec3 __device__ clamp(glm::vec3 vec)
 glm::vec3 __device__ trace_path(Scene::Scene *_scene, glm::vec3 *_pixels, glm::vec3 dir, glm::vec3 orig, int depth)
 {
     glm::vec3 color(0.f,0.f,0.f);
-    // if(depth>=_scene->max_depth)
-    // {
-    //     return color;
-    // }
-    // float dist;
-    // glm::vec3 norm(0.f);
-    // glm::vec2 uv(0.f);
-    // int matidx;
 
     glm::vec3 direction = dir;
     glm::vec3 origin = orig;
+    glm::vec3 ambient(0.1f);
+    float mult = 1.0f;
 
     for(int i=0; i<_scene->max_depth; i++)
     {
-        // intersectScene(_scene, look_from, dir, float &_intrsctDist, glm::vec3 &_intrsctNorm, glm::vec2 &_texCoord, int &_matIdx)
-        // Hit::Hit hit = Scene::intersectScene(_scene, origin, direction, &dist, &norm, &uv, &matidx);
         Hit::Hit hit = Scene::intersectScene(_scene, origin, direction);
         if (hit.hit)
         {
-            // calculate direct lighting for each light
             glm::vec3 hit_pt = origin + direction*hit.dist;
+            glm::vec3 inc;
+            glm::vec3 tmpdir;
+
+            // if we hit a light, return the emit color
+            if(_scene->materials[hit.matidx].emit>0)
+            {
+                color += _scene->materials[hit.matidx].cemit*_scene->materials[hit.matidx].emit;
+                break;
+            }
+
+            // calculate direct lighting for each light
             for(int l=0; l<_scene->numLights; l++)
             {
                 // glm::vec3 l(0,1,0);
                 glm::vec3 light_dir = glm::normalize(_scene->lights[l].position - hit_pt);
                 Material::Material light_material = _scene->materials[_scene->lights[l].materialIdx];
-                float light_intensity = light_material.emit*0.2f;
+                float light_intensity = light_material.emit;
                 glm::vec3 light_color = light_material.cemit;
 
-                // if(index==259680) printf("normal: %f, %f, %f\n", norm.x, norm.y, norm.z);
-                glm::vec3 surface_color;
-                if(_scene->materials[hit.matidx].diff>0.5)
-                    surface_color = glm::vec3(1.f,0.f,0.f);//*glm::dot(norm, l)*3.f;
-                else if(_scene->materials[hit.matidx].refl>0.5)
-                    surface_color = glm::vec3(1.f,0.f,0.f);//*glm::dot(norm, l)*3.f;
-                else if(_scene->materials[hit.matidx].refr>0.5)
-                    surface_color = glm::vec3(1.f,0.f,0.f);//*glm::dot(norm, l)*3.f;
+                glm::vec3 surface_color = _scene->materials[hit.matidx].cdiff*_scene->materials[hit.matidx].diff;
+                float n_dot_l;
 
-                // TODO: shadow ray
-
-                float n_dot_l = glm::dot(hit.norm, light_dir);
-                if(n_dot_l<0.f) n_dot_l = 0.f;
-                color += surface_color * light_color * light_intensity * n_dot_l;
-                
+                // send shadow ray
+                glm::vec3 light_orig = hit_pt + light_dir*0.00001f;
+                Hit::Hit lightHit = Scene::intersectScene(_scene, light_orig, light_dir);
+                // if we hit the light, shade the object
+                if(_scene->materials[lightHit.matidx].emit>0)
+                {
+                    n_dot_l = glm::dot(hit.norm, light_dir);
+                    if(n_dot_l<0.f) n_dot_l = 0.f;
+                    color += surface_color * light_color * light_intensity * n_dot_l * mult + surface_color * ambient;//TODO: no ambient light
+                }
+                else
+                {
+                    color += surface_color * ambient;
+                }
             }
-            // reflection
-            // glm::vec3 new_orig = orig + dir*dist + norm*(1e-30f);
-            // glm::vec3 new_dir = norm*(glm::dot(norm, inc)*2.f) - inc;
+            if(_scene->materials[hit.matidx].refl)
+            {
+                inc = direction*(-1.f);
+                tmpdir = hit.norm*(glm::dot(hit.norm, inc)*2.f) - inc;
+                tmpdir = glm::normalize(tmpdir);
+                origin = hit_pt + tmpdir*(0.00001f);//1e-30f
+                direction.x = tmpdir.x;
+                direction.y = tmpdir.y;
+                direction.z = tmpdir.z;
+                mult = 0.5; //lose energy with each bounce
+            }
+            else if(_scene->materials[hit.matidx].refr)
+            {
+                //refraction
+                bool into = glm::dot(hit.norm,direction)<=0;
+                float n1 = (mult==1.f) ? 1.f : _scene->materials[hit.matidx].ior;
+                float n2 = (!into) ? 1.f : _scene->materials[hit.matidx].ior;
 
-            // printf("addpoint(geoself(), set(%.2f, %.2f, %.2f));\n", dir.x, dir.y, dir.z);
-            // printf("addpoint(geoself(), set(%.2f, %.2f, %.2f));\n", orig.x, orig.y, orig.z);
-            // printf("addpoint(geoself(), set(%.2f, %.2f, %.2f));\n", dist, 0.0f, 0.0f);
+                float R0s = ((n1 - n2)*(n1 - n2))/((n1+n2)*(n1+n2));
+                float R0 = R0s*R0s;
+                float R = R0 + (1.f-R0)*glm::pow((1.f-glm::dot(hit.norm, inc)), 5.f);
+                float iof = n1/n2;
+                float c1 = glm::dot(-hit.norm, direction);
+                float cos2t = 1.f-iof*iof*(1.f-c1*c1);
+                if (cos2t >= 0) 
+                {
+                    float c2 = glm::sqrt(cos2t);
+                    direction = direction*iof + hit.norm * (iof*c1 - c2);
+                    direction = glm::normalize(direction);
+                    origin = hit_pt + direction*0.00001f;
+                    mult = 0.5;
+                }
+                else // total internal reflection?
+                {
+                    break;
+                }
+            }
+            else
+            {
+                break;
+            }
 
-            // !===memory errors
-            // printf("norm: %.2f, %.2f, %.2f\norig: %.2f, %.2f, %.2f\ndir: %.2f, %.2f, %.2f\ndist: %.2f\nhit_pt: %.2f, %.2f, %.2f\n\n", hit.norm.x, hit.norm.y, hit.norm.z, origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, hit.dist, hit_pt.x, hit_pt.y, hit_pt.z);
-            
-            glm::vec3 old_orig = origin;
-            glm::vec3 old_dir = direction;
-            origin = hit_pt + hit.norm*(0.000000000000000001f);//1e-30f
-            glm::vec3 inc = direction*(-1.f);
-            glm::vec3 tmpdir = hit.norm*(glm::dot(hit.norm, inc)*2.f) - inc;
-            tmpdir = glm::normalize(tmpdir);
-            direction.x = tmpdir.x;
-            direction.y = tmpdir.y;
-            direction.z = tmpdir.z;
+            // if((blockIdx.x*blockDim.x + threadIdx.x)==553 && (blockIdx.y*blockDim.y + threadIdx.y)==241)
+            //     printf("new_orig: %.2f, %.2f, %.2f\n new_dir: %.2f, %.2f, %.2f\nnorm: %.2f, %.2f, %.2f\norig: %.2f, %.2f, %.2f\ndir: %.2f, %.2f, %.2f\ndist: %.2f\nhit_pt: %.2f, %.2f, %.2f\n\n", origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, hit.norm.x, hit.norm.y, hit.norm.z, old_orig.x, old_orig.y, old_orig.z, old_dir.x, old_dir.y, old_dir.z, hit.dist, hit_pt.x, hit_pt.y, hit_pt.z);            
 
-            // !===values totally messed up
-            printf("new_orig: %.2f, %.2f, %.2f\nnorm: %.2f, %.2f, %.2f\norig: %.2f, %.2f, %.2f\ndir: %.2f, %.2f, %.2f\ndist: %.2f\nhit_pt: %.2f, %.2f, %.2f\n\n", origin.x, origin.y, origin.z, hit.norm.x, hit.norm.y, hit.norm.z, old_orig.x, old_orig.y, old_orig.z, old_dir.x, old_dir.y, old_dir.z, hit.dist, hit_pt.x, hit_pt.y, hit_pt.z);
-
-            // printf("addpoint(geoself(), set(%.2f, %.2f, %.2f));\n", orig.x, orig.y, orig.z);
-            // printf("addpoint(geoself(), set(%.2f, %.2f, %.2f));\n", hit_pt.x, hit_pt.y, hit_pt.z);
-
-            // if(depth) printf("reflect vector: %f, %f, %f\n", dir.x, dir.y, dir.z);
         }
         else
         {
+            color += ambient;
             break;
         }
     }
@@ -129,7 +152,7 @@ void __global__ trace_scene(Scene::Scene *_scene, glm::vec3 *_pixels)
             {
                 double xoff = randd_negative()*_scene->pixel_slice;
                 double yoff = randd_negative()*_scene->pixel_slice;
-                glm::vec3 dir(xpos+(_scene->pixel_slice*i)+xoff, ypos+(_scene->pixel_slice*j)+yoff, depth);
+                glm::vec3 dir(xpos+(_scene->pixel_slice*i)+xoff, ypos+(_scene->pixel_slice*j)+yoff, 0);
                 dir -= look_from;
                 dir = glm::normalize(dir);
                 color += trace_path(_scene, _pixels, dir, look_from, 0);
@@ -137,32 +160,6 @@ void __global__ trace_scene(Scene::Scene *_scene, glm::vec3 *_pixels)
         }
         color /= total_samples;
         _pixels[index] = clamp(color);
-        
-        
-
-        // int ii = i - r.image_width/2;
-        // int jj = j - r.image_height/2;
-        // double x = ii*pixel_width + pixel_slice/2;
-        // double y = jj*pixel_width + pixel_slice/2;
-        
-        // vec4 color(0,0,0);
-        //for each sample
-        // for(int m=0; m<r.samples1D; m++)
-        // {
-        //     for(int n=0; n<r.samples1D; n++)
-        //     {
-        //         double xoff = r.randd_negative()*pixel_slice;
-        //         double yoff = r.randd_negative()*pixel_slice;
-        //         vec4 dir(x+(pixel_slice*m)+xoff,y+(pixel_slice*n)+yoff,0);
-        //         dir -= look_from;
-        //         dir.normalize();
-        //         ray v(look_from, dir);
-        //         color += r.trace_path(v, 0, -1);
-        //     }
-        // }
-        // color *= 1/samples;
-        // color.clamp(1.0);
-        // pic.setpixel(i, j, color);
         
     }
 }

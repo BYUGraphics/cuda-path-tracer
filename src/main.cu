@@ -9,7 +9,12 @@
 #include "trace.h"
 #include "buildBVH.inl"
 
-#define PI 3.141592653589
+double when()
+{
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    return ((double) tp.tv_sec + (double) tp.tv_usec * 1e-6);
+}
 
 int main(int argc, char *argv[]){
 	
@@ -51,6 +56,8 @@ int main(int argc, char *argv[]){
 	//have the device build the BVHs for all objects in the scene
 	BVH::buildBVH(h_scene, d_scene);
 	
+	double start = when();
+
 	//render the image
 	Pixelmap::Pixelmap *h_ppm = Pixelmap::create_pixelmap(h_scene->width, h_scene->height);
 	glm::vec3 *d_pixels = Pixelmap::copyPixelmapToDevice(h_ppm);
@@ -69,7 +76,8 @@ int main(int argc, char *argv[]){
 	//save the image to disk
 	//TODO
 	Pixelmap::write_pixelmap("out.ppm", h_ppm);
-		
+	double time_gone_by = when() - start;
+	printf("TOTAL TIME: %lf seconds\n", time_gone_by);
 	
 	return 0;
 }

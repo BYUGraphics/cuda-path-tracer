@@ -44,19 +44,10 @@ namespace Scene{
 	Scene* createScene(std::string _filename){
 		//make a new Scene struct
 		Scene *result = (Scene*)malloc(sizeof(Scene));
-		// std::cout << result << std::endl;
-		// std::cout << "size " << sizeof(Scene) << std::endl;
-		//load the materials
-		//TODO
 		std::vector<Mesh::Mesh> meshes;
 		std::vector<Sphere::Sphere> spheres;
 		std::vector<Sphere::Sphere> lights;
 		std::vector<Material::Material> materials;
-		// result->numMaterials = 0;
-		// result->numTextures = 0;
-		// result->numMeshes = 0;
-		// result->numSpheres = 0;
-		// result->numLights = 0;
 		FILE *objfile = fopen(_filename.c_str(), "r");
 		if(objfile==NULL)
 		{
@@ -78,12 +69,11 @@ namespace Scene{
 				std::cout << "creating camera" << std::endl;
 				std::string width_str, height_str, samples_str, fov_str;
 				ss >> width_str >> height_str >> samples_str >> fov_str;
-				// TODO: create camera
 				result->width = atoi(width_str.c_str());
 				result->height = atoi(height_str.c_str());
 				result->samples = atoi(samples_str.c_str());
 				result->fov = atof(fov_str.c_str());
-				result->max_depth = 2;
+				result->max_depth = 4;
 			}
 			if(tok=="m")
 			{
@@ -94,7 +84,6 @@ namespace Scene{
 				glm::vec3 emit = read_vector(ss);
 				std::string sdiff, srefl, srefr, semit, sior;
 				ss >> sdiff >> srefl >> srefr >> semit >> sior;
-				// TODO: create material
 				Material::Material tmpmat;
 				tmpmat.cdiff = diff;
 				tmpmat.crefl = refl;
@@ -127,7 +116,6 @@ namespace Scene{
 				ss >> objfile >> smtl;
 				// TODO: create mesh
 				// std::cout << "numMeshes " << &(result->numMeshes) << std::endl;
-				// result->numMeshes++; // causes segfault, no idea why
 			}
 			if(tok=="s")
 			{
@@ -140,7 +128,6 @@ namespace Scene{
 				tmp.radius = atof(sradius.c_str());
 				tmp.materialIdx = atoi(smtl.c_str());
 				spheres.push_back(tmp);
-				// result->numSpheres++;
 				// TODO: if material has emit>0, add to light list
 				if(materials[tmp.materialIdx].emit>0)
 				{
@@ -155,14 +142,7 @@ namespace Scene{
 		result->numMeshes = 0;
 		result->numSpheres = spheres.size();
 		result->numLights = lights.size();
-		
-		//for each mesh
-			//make a mesh object
-			//add it to this->meshes
-		
-		//for each sphere
-			//make a sphere object
-			//add it to this->spheres
+
 		//for testing
 		// Sphere::Sphere tmp;
 		// tmp.position = glm::vec3();

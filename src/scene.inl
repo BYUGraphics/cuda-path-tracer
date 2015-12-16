@@ -39,13 +39,13 @@ namespace Scene{
 		bool didIntersect = false;
 		bool tmpIntersected;
 		Hit::Hit myHit;
-		Hit::Hit sphereHit;
 		//travese either the object or the acceleration structure to find the closest intersection
 		//for each sphere
 		for(i = 0; i < _scene->numSpheres; i++){
 			//intersect the sphere
 			// sphereHit = Sphere::intersectSphere(&(_scene->spheres[i]), _rayOrig, _rayDir, &tmpDist, &tmpNormal, &tmpTexCoord, &tmpMatIdx);
-			sphereHit = Sphere::intersectSphere(&(_scene->spheres[i]), _rayOrig, _rayDir);
+			
+			Hit::Hit sphereHit = Sphere::intersectSphere(&(_scene->spheres[i]), _rayOrig, _rayDir);
 			didIntersect |= sphereHit.hit;
 			//if the distance is >= 0 and less than the minimum distance
 			if(sphereHit.hit && sphereHit.dist >= 0.f && sphereHit.dist < minDist){
@@ -61,26 +61,26 @@ namespace Scene{
 			}
 		}
 		
-		
-		//for each mesh
-		for(i = 0; i < _scene->numMeshes; i++){
-			//intersect the mesh
-			//TODO: return hit struct
-			tmpIntersected = Mesh::intersectMesh(&(_scene->meshes[i]), _rayOrig, _rayDir, &tmpDist, &tmpNormal, &tmpTexCoord, &tmpMatIdx);
-			didIntersect |= tmpIntersected;
-			//if the distance is >= 0 and less than the minimum distance
-			if(tmpIntersected && tmpDist >= 0.f && tmpDist < minDist){
-				//set the minimum distance to the new distance
-				minDist = tmpDist;
-				//set the normal, UV, and material to the new ones
-				minNormal.x = tmpNormal.x;
-				minNormal.y = tmpNormal.y;
-				minNormal.z = tmpNormal.z;
-				minTexCoord.x = tmpTexCoord.x;
-				minTexCoord.y = tmpTexCoord.y;
-				minMatIdx = tmpMatIdx;
-			}
-		}
+		// printf("numMeshes: %d\n", _scene->numMeshes);
+		// //for each mesh
+		// for(i = 0; i < _scene->numMeshes; i++){
+		// 	//intersect the mesh
+		// 	//TODO: return hit struct
+		// 	tmpIntersected = Mesh::intersectMesh(&(_scene->meshes[i]), _rayOrig, _rayDir, &tmpDist, &tmpNormal, &tmpTexCoord, &tmpMatIdx);
+		// 	didIntersect |= tmpIntersected;
+		// 	//if the distance is >= 0 and less than the minimum distance
+		// 	if(tmpIntersected && tmpDist >= 0.f && tmpDist < minDist){
+		// 		//set the minimum distance to the new distance
+		// 		minDist = tmpDist;
+		// 		//set the normal, UV, and material to the new ones
+		// 		minNormal.x = tmpNormal.x;
+		// 		minNormal.y = tmpNormal.y;
+		// 		minNormal.z = tmpNormal.z;
+		// 		minTexCoord.x = tmpTexCoord.x;
+		// 		minTexCoord.y = tmpTexCoord.y;
+		// 		minMatIdx = tmpMatIdx;
+		// 	}
+		// }
 		
 		
 		//populate _intrsctDist, _intrsctNorm, _texCoor, and _matIdx with the results
@@ -99,6 +99,10 @@ namespace Scene{
 		myHit.uv.x = minTexCoord.x;
 		myHit.uv.y = minTexCoord.y;
 		myHit.matidx = minMatIdx;
+	
+		// if((blockIdx.x*blockDim.x + threadIdx.x)==553 && (blockIdx.y*blockDim.y + threadIdx.y)==241)
+		// printf("INTERSECT> hit: %d\nrayOrig: %.4f, %.4f, %.4f\nrayDir: %.4f, %.4f, %.4f\nnorm: %.4f, %.4f, %.4f\ndist: %.4f\n\n", myHit.hit, _rayOrig.x, _rayOrig.y, _rayOrig.z, _rayDir.x, _rayDir.y, _rayDir.z, myHit.norm.x, myHit.norm.y, myHit.norm.z, myHit.dist);
+
 		return myHit;
 	}
 }

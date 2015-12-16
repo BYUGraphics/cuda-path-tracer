@@ -2,6 +2,7 @@
 //sphere.inl
 //11/25/15
 #include "hit.inl"
+#include <stdio.h>
 
 namespace Sphere{
 	
@@ -19,12 +20,13 @@ namespace Sphere{
 		Hit::Hit myHit;
 
 		//transform the ray into object space
-		_rayOrig -= _sphere->position;
+		glm::vec3 sRayOrig = _rayOrig;
+		sRayOrig -= _sphere->position;
 		
 		//compute coefficients for the quadratic equation
 		float a = glm::dot(_rayDir, _rayDir);
-		float b = 2.f * glm::dot(_rayDir, _rayOrig);
-		float c = glm::dot(_rayOrig, _rayOrig) - (_sphere->radius * _sphere->radius);
+		float b = 2.f * glm::dot(_rayDir, sRayOrig);
+		float c = glm::dot(sRayOrig, sRayOrig) - (_sphere->radius * _sphere->radius);
 		
 		//find the discriminant
 		float disc = b * b - 4.f * a * c;
@@ -62,6 +64,14 @@ namespace Sphere{
 			t0 = t1;
 			t1 = tmp;
 		}
+
+		if(t0 < 0.f && t1 < 0.f){
+			myHit.hit = false;
+			return myHit;
+		}
+		else if(t0 < 0.f && t1 > 0.f){
+			t0 = t1;	//in case we're inside the sphere
+		}
 		
 		//store the intersection distance, normal, and material index
 		// *(_intrsctDist) = t0;
@@ -86,8 +96,16 @@ namespace Sphere{
 		myHit.matidx = _sphere->materialIdx;
 
 		//TODO
-		if(myHit.norm.x==0&&myHit.norm.y==0&&myHit.norm.z==0) printf("rayOrig: %.4f, %.4f, %.4f\nrayDir: %.4f, %.4f, %.4f\na: %.4f, b: %.4f, c: %.4f, q: %.4f, discSqrt: %.4f, t0: %.4f, t1: %.4f, _intrsctDist: %.4f\n\n", _rayOrig.x, _rayOrig.y, _rayOrig.z, _rayDir.x, _rayDir.y, _rayDir.z, a, b, c, q, discSqrt, t0, t1, myHit.dist);
-		// if(*(_intrsctDist)>10000.f) printf("rayOrig: %.4f, %.4f, %.4f\nrayDir: %.4f, %.4f, %.4f\na: %.4f, b: %.4f, c: %.4f, q: %.4f, discSqrt: %.4f, t0: %.4f, t1: %.4f, _intrsctDist: %.4f\n\n", _rayOrig.x, _rayOrig.y, _rayOrig.z, _rayDir.x, _rayDir.y, _rayDir.z, a, b, c, q, discSqrt, t0, t1, *(_intrsctDist));
+		// if((blockIdx.x*blockDim.x + threadIdx.x)==553 && (blockIdx.y*blockDim.y + threadIdx.y)==241)
+		// {
+		// 	printf("SPHERE> rayOrig: %.4f, %.4f, %.4f\nrayDir: %.4f, %.4f, %.4f\nnorm: %.4f, %.4f, %.4f\npt: %.4f, %.4f, %.4f\nsphere->position: %.4f, %.4f, %.4f\nt0: %.4f, t1: %.4f, dist: %.4f\n\n",
+  //          _rayOrig.x, _rayOrig.y, _rayOrig.z, 
+  //          _rayDir.x, _rayDir.y, _rayDir.z, 
+  //          myHit.norm.x, myHit.norm.y, myHit.norm.z, 
+  //          pt.x, pt.y, pt.z, 
+  //          _sphere->position.x, _sphere->position.y, _sphere->position.z, 
+  //          t0, t1, myHit.dist);
+		// }
 		return myHit;
 	}
 	
